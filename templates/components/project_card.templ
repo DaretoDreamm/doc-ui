@@ -1,0 +1,165 @@
+package components
+
+import (
+	"fmt"
+	"github.com/frkn/doc-ui/internal/models"
+)
+
+templ ProjectCard(p models.Project) {
+	<div id={ fmt.Sprintf("project-%d", p.ID) } class="fade-up group border border-zinc-800 rounded-lg p-4 hover:border-zinc-700 transition-colors bg-zinc-900/50">
+		<div class="flex items-start justify-between">
+			<div class="flex items-start gap-3 flex-1 min-w-0">
+				@paletteIcon(p.ColorPalette, string([]rune(p.Name)[0:1]))
+				<div class="min-w-0">
+					<h3 class="font-display font-semibold text-white truncate text-[15px]">{ p.Name }</h3>
+					<p class="text-[11px] text-zinc-500 mt-0.5 truncate font-mono">{ p.BaseURL }</p>
+				</div>
+			</div>
+			<div class="flex items-center gap-2 ml-4 flex-shrink-0">
+				@statusBadge(p.Status)
+				<button
+					hx-delete={ fmt.Sprintf("/projects/%d", p.ID) }
+					hx-target={ fmt.Sprintf("#project-%d", p.ID) }
+					hx-swap="outerHTML"
+					hx-confirm="Delete this project?"
+					class="text-zinc-600 hover:text-red-400 transition-colors p-1 opacity-0 group-hover:opacity-100"
+				>
+					<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path>
+					</svg>
+				</button>
+			</div>
+		</div>
+		if p.Status == "crawling" || p.Status == "pending" {
+			@CrawlStatus(p)
+		}
+		if p.Status == "done" {
+			<div class="mt-3 pt-3 border-t border-zinc-800 flex items-center justify-between">
+				<div class="flex items-center gap-2 text-[10px] font-mono text-zinc-500 uppercase tracking-wider">
+					<span>{ fmt.Sprintf("%d pages", p.PageCount) }</span>
+					<span class="text-zinc-700">&middot;</span>
+					<span>{ p.Template }</span>
+				</div>
+				<div class="flex items-center gap-3">
+					<button
+						hx-post={ fmt.Sprintf("/projects/%d/recrawl", p.ID) }
+						hx-target={ fmt.Sprintf("#project-%d", p.ID) }
+						hx-swap="outerHTML"
+						hx-confirm="Re-crawl this documentation? Existing pages will be replaced."
+						class="text-[10px] font-mono text-zinc-500 hover:text-amber-400 transition-colors"
+						title="Re-crawl from source"
+					>
+						<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182M2.985 19.644l3.181-3.183"></path>
+						</svg>
+					</button>
+					<a
+						href={ templ.SafeURL(fmt.Sprintf("/docs/%d", p.ID)) }
+						class="inline-flex items-center gap-1 text-sm font-semibold text-indigo-400 hover:text-indigo-300 transition-colors"
+					>
+						Open
+						<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" d="M4.5 19.5l15-15m0 0H8.25m11.25 0v11.25"></path>
+						</svg>
+					</a>
+				</div>
+			</div>
+		}
+		if p.Status == "error" {
+			<div class="mt-3 flex items-center justify-between gap-2">
+				<div class="text-xs text-red-400 bg-red-950/30 border border-red-900/50 rounded px-3 py-2 font-mono flex-1">
+					{ p.ErrorMsg }
+				</div>
+				<button
+					hx-post={ fmt.Sprintf("/projects/%d/recrawl", p.ID) }
+					hx-target={ fmt.Sprintf("#project-%d", p.ID) }
+					hx-swap="outerHTML"
+					class="text-[10px] font-mono text-zinc-500 hover:text-amber-400 transition-colors px-2 py-1 border border-zinc-700 hover:border-amber-400/50 rounded flex-shrink-0"
+				>
+					retry
+				</button>
+			</div>
+		}
+	</div>
+}
+
+templ statusBadge(status string) {
+	switch status {
+		case "pending":
+			<span class="flex items-center gap-1 text-[10px] font-mono text-amber-400"><span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>pending</span>
+		case "crawling":
+			<span class="flex items-center gap-1 text-[10px] font-mono text-indigo-400"><span class="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse"></span>crawling</span>
+		case "done":
+			<span class="flex items-center gap-1 text-[10px] font-mono text-emerald-400"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>done</span>
+		case "error":
+			<span class="flex items-center gap-1 text-[10px] font-mono text-red-400"><span class="w-1.5 h-1.5 rounded-full bg-red-400"></span>error</span>
+	}
+}
+
+func getPaletteColor(id string) string {
+	for _, p := range models.ColorPalettes {
+		if p.ID == id {
+			return p.Color
+		}
+	}
+	return "#0ea5e9"
+}
+
+templ paletteIcon(paletteID string, letter string) {
+	@templ.Raw(fmt.Sprintf(`<div class="w-9 h-9 rounded-md flex-shrink-0 flex items-center justify-center text-white font-display font-bold text-sm" style="background-color:%s">%s</div>`, getPaletteColor(paletteID), letter))
+}
+
+// CrawlStatus renders the polling progress area. Replaces itself until done.
+templ CrawlStatus(p models.Project) {
+	if p.Status == "crawling" || p.Status == "pending" {
+		<div
+			id={ fmt.Sprintf("progress-%d", p.ID) }
+			hx-get={ fmt.Sprintf("/projects/%d/progress", p.ID) }
+			hx-trigger="every 2s"
+			hx-swap="outerHTML"
+			class="mt-3 flex items-center justify-between"
+		>
+			<div class="flex items-center gap-2">
+				<div class="animate-spin h-3 w-3 border-[1.5px] border-indigo-400 border-t-transparent rounded-full"></div>
+				<span class="text-xs text-indigo-400 font-mono">
+					if p.Status == "pending" {
+						starting...
+					} else {
+						{ fmt.Sprintf("crawling — %d pages", p.PageCount) }
+					}
+				</span>
+			</div>
+			<button
+				hx-post={ fmt.Sprintf("/projects/%d/stop", p.ID) }
+				hx-target={ fmt.Sprintf("#progress-%d", p.ID) }
+				hx-swap="outerHTML"
+				class="text-[10px] font-mono text-zinc-500 hover:text-red-400 transition-colors px-2 py-0.5 border border-zinc-700 hover:border-red-400/50 rounded"
+			>
+				stop
+			</button>
+		</div>
+	} else if p.Status == "done" {
+		<div id={ fmt.Sprintf("progress-%d", p.ID) } class="mt-3 pt-3 border-t border-zinc-800 flex items-center justify-between">
+			<div class="flex items-center gap-2 text-[10px] font-mono text-zinc-500 uppercase tracking-wider">
+				<span class="flex items-center gap-1 text-emerald-400"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>done</span>
+				<span class="text-zinc-700">&middot;</span>
+				<span>{ fmt.Sprintf("%d pages", p.PageCount) }</span>
+				<span class="text-zinc-700">&middot;</span>
+				<span>{ p.Template }</span>
+			</div>
+			<a
+				href={ templ.SafeURL(fmt.Sprintf("/docs/%d", p.ID)) }
+				class="inline-flex items-center gap-1 text-sm font-semibold text-indigo-400 hover:text-indigo-300 transition-colors"
+			>
+				Open
+				<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+					<path stroke-linecap="round" stroke-linejoin="round" d="M4.5 19.5l15-15m0 0H8.25m11.25 0v11.25"></path>
+				</svg>
+			</a>
+		</div>
+	} else if p.Status == "error" {
+		<div id={ fmt.Sprintf("progress-%d", p.ID) } class="mt-3 text-xs text-red-400 bg-red-950/30 border border-red-900/50 rounded px-3 py-2 font-mono">
+			{ p.ErrorMsg }
+		</div>
+	}
+}

@@ -1,0 +1,22 @@
+package components
+
+import (
+	"fmt"
+	"github.com/frkn/doc-ui/internal/models"
+)
+
+templ SearchResults(projectID int64, results []models.Page) {
+	if len(results) == 0 {
+		<div class="px-4 py-8 text-center text-sm" style="color: var(--c-text-muted);">No results found</div>
+	}
+	for _, p := range results {
+		<a
+			href={ templ.SafeURL(fmt.Sprintf("/docs/%d/%s", projectID, p.Path)) }
+			class="spotlight-result block px-4 py-3 transition-colors no-underline"
+			style="color: var(--c-text);"
+		>
+			<div class="text-sm font-medium truncate">{ p.Title }</div>
+			<div class="text-xs truncate mt-0.5 font-mono" style="color: var(--c-text-muted);">{ p.Path }</div>
+		</a>
+	}
+}

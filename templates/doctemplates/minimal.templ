@@ -1,0 +1,81 @@
+package doctemplates
+
+import (
+	"fmt"
+	"github.com/frkn/doc-ui/internal/models"
+)
+
+templ Minimal(project *models.Project, pages []models.Page, current *models.Page, prevPage *models.Page, nextPage *models.Page, paletteCSS string, typoCSS string, fontsLink string) {
+	<!DOCTYPE html>
+	<html lang="en">
+		<head>
+			<meta charset="UTF-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+			<title>{ current.Title } - { project.Name }</title>
+			<script src="https://cdn.tailwindcss.com"></script>
+			<link rel="preconnect" href="https://fonts.googleapis.com"/>
+			<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+			@templ.Raw(fontsLink)
+			@templ.Raw("<style>" + paletteCSS + typoCSS + ProseCSS() + "</style>")
+		</head>
+		<body>
+			<header class="border-b sticky top-0 z-10" style="background: var(--c-surface); border-color: var(--c-border);">
+				<div class="max-w-3xl mx-auto px-6 py-3 flex items-center justify-between">
+					<div class="flex items-center gap-2 text-sm">
+						<a href="/" class="opacity-40 hover:opacity-100 transition-opacity text-xs font-mono">&larr; DocUI</a>
+						<span class="opacity-20">/</span>
+						<a href={ templ.SafeURL(fmt.Sprintf("/docs/%d", project.ID)) } class="font-display font-semibold" style="color: var(--c-primary);">{ project.Name }</a>
+					</div>
+					@SpotlightTrigger()
+				</div>
+			</header>
+			<div class="max-w-3xl mx-auto px-6 py-10">
+				<article class="prose">
+					@templ.Raw(current.Content)
+				</article>
+				<nav class="mt-10 pt-6 flex justify-between gap-4" style="border-top: 1px solid var(--c-border);">
+					if prevPage != nil {
+						<a href={ templ.SafeURL(fmt.Sprintf("/docs/%d/%s", project.ID, prevPage.Path)) } class="text-sm font-medium no-underline px-4 py-2 rounded-lg transition-colors truncate max-w-[45%]" style="color: var(--c-primary); background: var(--c-active-bg);">
+							&larr; { prevPage.Title }
+						</a>
+					} else {
+						<span></span>
+					}
+					if nextPage != nil {
+						<a href={ templ.SafeURL(fmt.Sprintf("/docs/%d/%s", project.ID, nextPage.Path)) } class="text-sm font-medium no-underline px-4 py-2 rounded-lg transition-colors truncate max-w-[45%] text-right" style="color: var(--c-primary); background: var(--c-active-bg);">
+							{ nextPage.Title } &rarr;
+						</a>
+					}
+				</nav>
+			</div>
+			<aside class="max-w-3xl mx-auto px-6 pb-10">
+				<details class="group">
+					<summary class="cursor-pointer text-xs font-mono font-medium list-none flex items-center gap-1 uppercase tracking-wider" style="color: var(--c-text-muted);">
+						<svg class="w-3.5 h-3.5 group-open:rotate-90 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+						</svg>
+						<span>All Pages</span>
+					</summary>
+					<ul class="mt-3 space-y-0.5">
+						for _, page := range pages {
+							<li>
+								if page.ID == current.ID {
+									<a href={ templ.SafeURL(fmt.Sprintf("/docs/%d/%s", project.ID, page.Path)) } class="block px-3 py-1.5 text-sm rounded-md font-medium no-underline" style="background: var(--c-active-bg); color: var(--c-active-text);">
+										{ page.Title }
+									</a>
+								} else {
+									<a href={ templ.SafeURL(fmt.Sprintf("/docs/%d/%s", project.ID, page.Path)) } class="block px-3 py-1.5 text-sm rounded-md no-underline transition-colors hover:bg-black/5" style="color: var(--c-text-muted);">
+										{ page.Title }
+									</a>
+								}
+							</li>
+						}
+					</ul>
+				</details>
+			</aside>
+			@Spotlight(project.ID)
+			<script src="https://unpkg.com/htmx.org@2.0.4"></script>
+			@templ.Raw("<script>" + SpotlightJS() + "</script>")
+		</body>
+	</html>
+}

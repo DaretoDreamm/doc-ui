@@ -1,0 +1,78 @@
+package layouts
+
+templ Base(title string) {
+	<!DOCTYPE html>
+	<html lang="en">
+		<head>
+			<meta charset="UTF-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+			<title>{ title } - DocUI</title>
+			<script src="https://unpkg.com/htmx.org@2.0.4"></script>
+			<script src="https://cdn.tailwindcss.com"></script>
+			<link rel="preconnect" href="https://fonts.googleapis.com"/>
+			<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+			<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet"/>
+			<style>
+				body { font-family: 'Plus Jakarta Sans', sans-serif; background: #09090b; color: #fafafa; }
+				h1, h2, h3, .font-display { font-family: 'Syne', sans-serif; }
+				code, pre, .font-mono { font-family: 'Fira Code', monospace; }
+
+				/* Dot grid background */
+				.dot-grid {
+					background-image: radial-gradient(circle, rgba(255,255,255,0.04) 1px, transparent 1px);
+					background-size: 20px 20px;
+				}
+
+				/* Window chrome */
+				.window-card { border: 1px solid #27272a; border-radius: 12px; overflow: hidden; }
+				.window-bar { background: #18181b; padding: 12px 16px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #27272a; }
+				.window-dot { width: 10px; height: 10px; border-radius: 50%; }
+				.window-body { background: #0f0f12; padding: 28px; }
+
+				/* Animations */
+				.fade-up { animation: fadeUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; }
+				.fade-up-1 { animation-delay: 0.05s; }
+				.fade-up-2 { animation-delay: 0.1s; }
+				.fade-up-3 { animation-delay: 0.15s; }
+				@keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
+				/* Template & Palette selectors */
+				.template-card input:checked + div { border-color: #6366f1; background: rgba(99, 102, 241, 0.08); }
+				.palette-radio input:checked + div { box-shadow: 0 0 0 2px #09090b, 0 0 0 4px currentColor; transform: scale(1.15); }
+				.palette-radio div { transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s; cursor: pointer; }
+				.palette-radio:hover div { transform: scale(1.1); }
+
+				/* Scrollbar */
+				* { scrollbar-width: thin; scrollbar-color: #27272a transparent; }
+				::-webkit-scrollbar { width: 5px; height: 5px; }
+				::-webkit-scrollbar-track { background: transparent; }
+				::-webkit-scrollbar-thumb { background: #27272a; border-radius: 99px; }
+				::-webkit-scrollbar-thumb:hover { background: #3f3f46; }
+
+				/* Input focus */
+				input:focus { outline: none; }
+			</style>
+		</head>
+		<body class="min-h-screen dot-grid">
+			<nav class="border-b border-zinc-800/80 backdrop-blur-sm sticky top-0 z-50" style="background: rgba(9,9,11,0.85);">
+				<div class="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
+					<a href="/" class="flex items-center gap-2 group">
+						<div class="w-7 h-7 bg-indigo-600 rounded-md flex items-center justify-center">
+							<svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+							</svg>
+						</div>
+						<span class="font-display font-bold text-white tracking-tight">DocUI</span>
+					</a>
+					<div class="flex items-center gap-1.5 text-[10px] font-mono text-zinc-500">
+						<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+						<span>v1.0</span>
+					</div>
+				</div>
+			</nav>
+			<main class="max-w-5xl mx-auto px-6 py-10">
+				{ children... }
+			</main>
+		</body>
+	</html>
+}

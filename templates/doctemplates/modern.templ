@@ -1,0 +1,169 @@
+package doctemplates
+
+import (
+	"fmt"
+	"github.com/frkn/doc-ui/internal/models"
+)
+
+templ Modern(project *models.Project, pages []models.Page, current *models.Page, prevPage *models.Page, nextPage *models.Page, paletteCSS string, typoCSS string, fontsLink string) {
+	<!DOCTYPE html>
+	<html lang="en">
+		<head>
+			<meta charset="UTF-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+			<title>{ current.Title } - { project.Name }</title>
+			<script src="https://cdn.tailwindcss.com"></script>
+			<link rel="preconnect" href="https://fonts.googleapis.com"/>
+			<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+			@templ.Raw(fontsLink)
+			@templ.Raw("<style>" + paletteCSS + typoCSS + ProseCSS() + `
+				.modern-nav { background: var(--c-surface); border-color: var(--c-border); color: var(--c-text); }
+				.modern-sidebar { background: var(--c-sidebar); border-color: var(--c-border); }
+				.modern-input { background: var(--c-bg); border: 1px solid var(--c-border); color: var(--c-text); transition: border-color 0.15s; }
+				.modern-input::placeholder { color: var(--c-text-muted); opacity: 0.5; }
+				.modern-input:focus { outline: none; border-color: var(--c-primary); box-shadow: 0 0 0 2px var(--c-active-bg); }
+				.sidebar-active { background: var(--c-active-bg); color: var(--c-active-text); font-weight: 500; }
+				.sidebar-item { color: var(--c-text-muted); transition: all 0.15s; }
+				.sidebar-item:hover { background: var(--c-active-bg); color: var(--c-text); }
+				.toc-link { font-size: 0.8125rem; color: var(--c-text-muted); transition: color 0.15s; text-decoration: none; }
+				.toc-link:hover { color: var(--c-primary); }
+				.toc-heading { color: var(--c-text-muted); }
+				.theme-btn { color: var(--c-text-muted); border: 1px solid var(--c-border); }
+				.theme-btn:hover { color: var(--c-primary); border-color: var(--c-primary); }
+				.back-link { color: var(--c-text-muted); }
+				.back-link:hover { color: var(--c-text); }
+			` + "</style>")
+		</head>
+		<body>
+			<header class="modern-nav border-b sticky top-0 z-20">
+				<div class="flex items-center justify-between px-6 py-3">
+					<div class="flex items-center gap-4">
+						<a href="/" class="back-link text-[10px] font-mono uppercase tracking-wider transition-colors">&larr; DocUI</a>
+						<span class="font-display font-bold text-lg tracking-tight" style="color: var(--c-text);">{ project.Name }</span>
+					</div>
+					<div class="flex items-center gap-2">
+						@SpotlightTrigger()
+						<button
+							onclick="toggleDark()"
+							class="theme-btn p-2 rounded-md transition-colors"
+							id="theme-toggle"
+						>
+						<svg class="w-4 h-4" id="sun-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="display:none;">
+							<path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
+						</svg>
+						<svg class="w-4 h-4" id="moon-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+						</svg>
+					</button>
+					</div>
+				</div>
+			</header>
+			<div class="flex" style="background: var(--c-bg);">
+				<aside class="modern-sidebar w-64 border-r h-[calc(100vh-49px)] sticky top-[49px] overflow-y-auto flex-shrink-0">
+					<div class="p-4">
+						<input
+							type="text"
+							placeholder="Search pages..."
+							class="w-full px-3 py-2 text-sm rounded-md modern-input"
+							oninput="filterModernPages(this.value)"
+						/>
+					</div>
+					<nav class="px-3 pb-4" id="modern-nav">
+						for _, page := range pages {
+							if page.ID == current.ID {
+								<a
+									href={ templ.SafeURL(fmt.Sprintf("/docs/%d/%s", project.ID, page.Path)) }
+									class="sidebar-active block px-3 py-1.5 text-sm rounded-md mb-px"
+									data-title={ page.Title }
+								>
+									{ page.Title }
+								</a>
+							} else {
+								<a
+									href={ templ.SafeURL(fmt.Sprintf("/docs/%d/%s", project.ID, page.Path)) }
+									class="sidebar-item block px-3 py-1.5 text-sm rounded-md mb-px"
+									data-title={ page.Title }
+								>
+									{ page.Title }
+								</a>
+							}
+						}
+					</nav>
+				</aside>
+				<main class="flex-1 min-w-0">
+					<div class="max-w-4xl mx-auto px-8 py-10">
+						<article class="prose" id="article-content">
+							@templ.Raw(current.Content)
+						</article>
+						<nav class="mt-10 pt-6 flex justify-between gap-4" style="border-top: 1px solid var(--c-border);">
+							if prevPage != nil {
+								<a href={ templ.SafeURL(fmt.Sprintf("/docs/%d/%s", project.ID, prevPage.Path)) } class="px-4 py-2 rounded-lg text-sm font-medium no-underline transition-colors truncate max-w-[45%]" style="background: var(--c-active-bg); color: var(--c-primary);">
+									&larr; { prevPage.Title }
+								</a>
+							} else {
+								<span></span>
+							}
+							if nextPage != nil {
+								<a href={ templ.SafeURL(fmt.Sprintf("/docs/%d/%s", project.ID, nextPage.Path)) } class="px-4 py-2 rounded-lg text-sm font-medium no-underline transition-colors truncate max-w-[45%] text-right" style="background: var(--c-active-bg); color: var(--c-primary);">
+									{ nextPage.Title } &rarr;
+								</a>
+							}
+						</nav>
+					</div>
+				</main>
+				<aside class="w-52 flex-shrink-0 hidden lg:block">
+					<div class="sticky top-16 p-4">
+						<h4 class="toc-heading text-[10px] font-mono font-bold uppercase tracking-[0.15em] mb-3">On this page</h4>
+						<nav id="toc" class="space-y-1.5"></nav>
+					</div>
+				</aside>
+			</div>
+			<script>
+				function toggleDark() {
+					const html = document.documentElement;
+					const isDark = html.classList.toggle('dark');
+					localStorage.setItem('theme', isDark ? 'dark' : 'light');
+					updateIcons(isDark);
+				}
+				function updateIcons(isDark) {
+					document.getElementById('sun-icon').style.display = isDark ? '' : 'none';
+					document.getElementById('moon-icon').style.display = isDark ? 'none' : '';
+				}
+				(function() {
+					const theme = localStorage.getItem('theme');
+					if (theme === 'dark') {
+						document.documentElement.classList.add('dark');
+						updateIcons(true);
+					}
+				})();
+				function buildTOC() {
+					const article = document.getElementById('article-content');
+					const toc = document.getElementById('toc');
+					if (!article || !toc) return;
+					toc.innerHTML = '';
+					article.querySelectorAll('h2, h3').forEach((h, i) => {
+						const id = 'h-' + i;
+						h.id = id;
+						const a = document.createElement('a');
+						a.href = '#' + id;
+						a.textContent = h.textContent;
+						a.className = 'toc-link block' + (h.tagName === 'H3' ? ' pl-3' : '');
+						toc.appendChild(a);
+					});
+				}
+				buildTOC();
+				function filterModernPages(query) {
+					const links = document.querySelectorAll('#modern-nav a');
+					const q = query.toLowerCase();
+					links.forEach(link => {
+						const title = link.getAttribute('data-title').toLowerCase();
+						link.style.display = title.includes(q) ? '' : 'none';
+					});
+				}
+			</script>
+			@Spotlight(project.ID)
+			<script src="https://unpkg.com/htmx.org@2.0.4"></script>
+			@templ.Raw("<script>" + SpotlightJS() + "</script>")
+		</body>
+	</html>
+}

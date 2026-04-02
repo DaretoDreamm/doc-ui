@@ -1,0 +1,110 @@
+package doctemplates
+
+import (
+	"fmt"
+	"github.com/frkn/doc-ui/internal/models"
+)
+
+templ Sidebar(project *models.Project, pages []models.Page, current *models.Page, prevPage *models.Page, nextPage *models.Page, paletteCSS string, typoCSS string, fontsLink string) {
+	<!DOCTYPE html>
+	<html lang="en">
+		<head>
+			<meta charset="UTF-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+			<title>{ current.Title } - { project.Name }</title>
+			<script src="https://cdn.tailwindcss.com"></script>
+			<link rel="preconnect" href="https://fonts.googleapis.com"/>
+			<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+			@templ.Raw(fontsLink)
+			@templ.Raw("<style>" + paletteCSS + typoCSS + ProseCSS() + `
+				.sidebar-link { transition: all 0.15s; }
+				.sidebar-link.active { background: var(--c-active-bg); color: var(--c-active-text); font-weight: 500; border-left: 3px solid var(--c-primary); padding-left: 9px; }
+				.sidebar-link:not(.active):hover { background: var(--c-active-bg); color: var(--c-text); }
+				.sidebar-search { background: var(--c-surface); border: 1px solid var(--c-border); color: var(--c-text); transition: border-color 0.15s, box-shadow 0.15s; }
+				.sidebar-search::placeholder { color: var(--c-text-muted); opacity: 0.6; }
+				.sidebar-search:focus { outline: none; border-color: var(--c-primary); box-shadow: 0 0 0 2px var(--c-active-bg); }
+			` + "</style>")
+		</head>
+		<body>
+			<div class="flex h-screen overflow-hidden">
+				<aside class="w-72 border-r flex flex-col h-full flex-shrink-0" style="background: var(--c-sidebar); border-color: var(--c-border);">
+					<div class="p-4 border-b" style="border-color: var(--c-border);">
+						<a href="/" class="text-[10px] font-mono uppercase tracking-wider block mb-1.5 transition-opacity hover:opacity-100" style="color: var(--c-text-muted); opacity: 0.6;">&larr; Back to DocUI</a>
+						<h1 class="font-display font-bold text-lg tracking-tight" style="color: var(--c-primary);">{ project.Name }</h1>
+						<p class="text-[10px] font-mono mt-0.5" style="color: var(--c-text-muted);">{ fmt.Sprintf("%d pages", len(pages)) }</p>
+					</div>
+					<div class="p-3 space-y-2">
+						@SpotlightTrigger()
+						<input
+							type="text"
+							placeholder="Filter sidebar..."
+							class="w-full px-3 py-2 text-sm rounded-md sidebar-search"
+							oninput="filterPages(this.value)"
+						/>
+					</div>
+					<nav class="flex-1 overflow-y-auto px-3 pb-4" id="sidebar-nav">
+						for _, page := range pages {
+							if page.ID == current.ID {
+								<a
+									href={ templ.SafeURL(fmt.Sprintf("/docs/%d/%s", project.ID, page.Path)) }
+									class="sidebar-link active block px-3 py-1.5 text-sm rounded-md mb-px"
+									data-title={ page.Title }
+								>
+									{ page.Title }
+								</a>
+							} else {
+								<a
+									href={ templ.SafeURL(fmt.Sprintf("/docs/%d/%s", project.ID, page.Path)) }
+									class="sidebar-link block px-3 py-1.5 text-sm rounded-md mb-px"
+									style="color: var(--c-text-muted);"
+									data-title={ page.Title }
+								>
+									{ page.Title }
+								</a>
+							}
+						}
+					</nav>
+				</aside>
+				<div class="flex-1 overflow-y-auto" id="doc-content" style="background: var(--c-bg);">
+					<div class="max-w-4xl mx-auto px-8 py-10">
+						<article class="prose">
+							@templ.Raw(current.Content)
+						</article>
+						<nav class="mt-10 pt-6 flex justify-between gap-4" style="border-top: 1px solid var(--c-border);">
+							if prevPage != nil {
+								<a href={ templ.SafeURL(fmt.Sprintf("/docs/%d/%s", project.ID, prevPage.Path)) } class="flex items-center gap-1 text-sm font-medium no-underline px-4 py-2 rounded-lg transition-colors truncate max-w-[45%]" style="color: var(--c-primary); background: var(--c-active-bg);">
+									<svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+										<path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"></path>
+									</svg>
+									<span class="truncate">{ prevPage.Title }</span>
+								</a>
+							} else {
+								<span></span>
+							}
+							if nextPage != nil {
+								<a href={ templ.SafeURL(fmt.Sprintf("/docs/%d/%s", project.ID, nextPage.Path)) } class="flex items-center gap-1 text-sm font-medium no-underline px-4 py-2 rounded-lg transition-colors truncate max-w-[45%]" style="color: var(--c-primary); background: var(--c-active-bg);">
+									<span class="truncate">{ nextPage.Title }</span>
+									<svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+										<path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"></path>
+									</svg>
+								</a>
+							}
+						</nav>
+					</div>
+				</div>
+			</div>
+			@Spotlight(project.ID)
+			<script src="https://unpkg.com/htmx.org@2.0.4"></script>
+			@templ.Raw("<script>" + SpotlightJS() + `
+				function filterPages(query) {
+					const links = document.querySelectorAll('#sidebar-nav a');
+					const q = query.toLowerCase();
+					links.forEach(link => {
+						const title = link.getAttribute('data-title').toLowerCase();
+						link.style.display = title.includes(q) ? '' : 'none';
+					});
+				}
+			` + "</script>")
+		</body>
+	</html>
+}

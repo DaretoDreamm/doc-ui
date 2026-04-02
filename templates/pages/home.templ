@@ -1,0 +1,37 @@
+package pages
+
+import (
+	"fmt"
+	"github.com/frkn/doc-ui/internal/models"
+	"github.com/frkn/doc-ui/templates/components"
+	"github.com/frkn/doc-ui/templates/layouts"
+)
+
+templ Home(projects []models.Project) {
+	@layouts.Base("Home") {
+		@components.FormNew()
+		<div class="fade-up fade-up-2">
+			<div class="flex items-center gap-3 mb-5">
+				<h2 class="font-display font-bold text-white text-lg tracking-tight">Projects</h2>
+				if len(projects) > 0 {
+					<span class="text-[10px] font-mono text-zinc-500 bg-zinc-800 px-2 py-0.5 rounded">{ lenStr(len(projects)) }</span>
+				}
+			</div>
+			<div id="project-list" class="space-y-2">
+				if len(projects) == 0 {
+					<div class="text-center py-16 border border-dashed border-zinc-800 rounded-lg">
+						<p class="text-sm text-zinc-600 font-mono">No projects yet</p>
+						<p class="text-xs text-zinc-700 mt-1">Create one above to get started</p>
+					</div>
+				}
+				for _, p := range projects {
+					@components.ProjectCard(p)
+				}
+			</div>
+		</div>
+	}
+}
+
+func lenStr(n int) string {
+	return fmt.Sprintf("%d", n)
+}

@@ -1,0 +1,191 @@
+package components
+
+import (
+	"fmt"
+	"github.com/frkn/doc-ui/internal/models"
+)
+
+templ FormNew() {
+	<div class="window-card fade-up mb-10">
+		<div class="window-bar">
+			<div class="window-dot" style="background: #ff5f57;"></div>
+			<div class="window-dot" style="background: #febc2e;"></div>
+			<div class="window-dot" style="background: #28c840;"></div>
+			<span class="ml-2 text-xs font-mono text-zinc-500">new-project</span>
+		</div>
+		<div class="window-body">
+			<h2 class="font-display font-bold text-2xl text-white mb-1 tracking-tight">Create Documentation</h2>
+			<p class="text-sm text-zinc-500 mb-8">Paste a documentation URL and we'll crawl it into a beautiful reader.</p>
+			<form
+				hx-post="/projects"
+				hx-target="#project-list"
+				hx-swap="afterbegin"
+				hx-on::after-request="if(event.detail.successful) this.reset()"
+				class="space-y-7"
+			>
+				<div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+					<div>
+						<label for="name" class="block text-[10px] font-mono text-zinc-400 mb-2 uppercase tracking-[0.15em]">Project Name</label>
+						<input
+							type="text"
+							id="name"
+							name="name"
+							required
+							placeholder="HTMX Docs"
+							class="w-full px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-lg text-white placeholder-zinc-600 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 transition-all"
+						/>
+					</div>
+					<div>
+						<label for="url" class="block text-[10px] font-mono text-zinc-400 mb-2 uppercase tracking-[0.15em]">Documentation URL</label>
+						<input
+							type="url"
+							id="url"
+							name="url"
+							required
+							placeholder="https://htmx.org/docs/"
+							class="w-full px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-lg text-white placeholder-zinc-600 font-mono text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 transition-all"
+						/>
+					</div>
+				</div>
+				<div>
+					<label class="block text-[10px] font-mono text-zinc-400 mb-3 uppercase tracking-[0.15em]">Layout</label>
+					<div class="grid grid-cols-3 gap-3">
+						@templatePreview("minimal", "Minimal", true)
+						@templatePreview("sidebar", "Sidebar", false)
+						@templatePreview("modern", "Modern", false)
+					</div>
+				</div>
+				<div>
+					<label class="block text-[10px] font-mono text-zinc-400 mb-3 uppercase tracking-[0.15em]">Theme Color</label>
+					<div class="flex items-center gap-3 flex-wrap">
+						for i, p := range models.ColorPalettes {
+							@paletteCircle(i, p)
+						}
+					</div>
+				</div>
+				<div>
+					<label class="block text-[10px] font-mono text-zinc-400 mb-3 uppercase tracking-[0.15em]">Typography</label>
+					<div class="grid grid-cols-5 gap-2">
+						for i, t := range models.Typographies {
+							@typographyCard(i, t)
+						}
+					</div>
+				</div>
+				<div class="flex items-center gap-4 pt-2">
+					<button
+						type="submit"
+						class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold rounded-lg transition-colors active:scale-[0.98]"
+					>
+						Start Crawling &rarr;
+					</button>
+					<span class="text-[11px] text-zinc-600 font-mono">We'll handle the rest</span>
+				</div>
+			</form>
+		</div>
+	</div>
+}
+
+templ templatePreview(id string, name string, checked bool) {
+	<label class="template-card cursor-pointer">
+		if checked {
+			<input type="radio" name="template" value={ id } class="sr-only" required checked/>
+		} else {
+			<input type="radio" name="template" value={ id } class="sr-only" required/>
+		}
+		<div class="border border-zinc-800 rounded-lg p-3 hover:border-zinc-600 transition-all">
+			<div class="aspect-[4/3] rounded overflow-hidden mb-2.5">
+				if id == "minimal" {
+					@minimalPreviewSVG()
+				}
+				if id == "sidebar" {
+					@sidebarPreviewSVG()
+				}
+				if id == "modern" {
+					@modernPreviewSVG()
+				}
+			</div>
+			<p class="text-xs font-medium text-center text-zinc-400">{ name }</p>
+		</div>
+	</label>
+}
+
+templ minimalPreviewSVG() {
+	<svg viewBox="0 0 160 120" class="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+		<rect width="160" height="120" fill="#18181b" rx="3"/>
+		<rect x="0" y="0" width="160" height="8" fill="#27272a" rx="3"/>
+		<circle cx="8" cy="4" r="1.5" fill="#ff5f57"/><circle cx="14" cy="4" r="1.5" fill="#febc2e"/><circle cx="20" cy="4" r="1.5" fill="#28c840"/>
+		<rect x="35" y="16" width="90" height="5" fill="#52525b" rx="1"/>
+		<rect x="40" y="26" width="80" height="2.5" fill="#3f3f46" rx="1"/>
+		<rect x="45" y="32" width="70" height="2.5" fill="#3f3f46" rx="1"/>
+		<rect x="35" y="40" width="90" height="20" fill="#09090b" rx="2"/>
+		<rect x="40" y="45" width="50" height="2" fill="#818cf8" rx="1"/>
+		<rect x="40" y="50" width="65" height="2" fill="#34d399" rx="1"/>
+		<rect x="40" y="55" width="40" height="2" fill="#fbbf24" rx="1"/>
+		<rect x="40" y="66" width="80" height="2.5" fill="#3f3f46" rx="1"/>
+		<rect x="45" y="72" width="70" height="2.5" fill="#3f3f46" rx="1"/>
+		<rect x="40" y="78" width="75" height="2.5" fill="#3f3f46" rx="1"/>
+	</svg>
+}
+
+templ sidebarPreviewSVG() {
+	<svg viewBox="0 0 160 120" class="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+		<rect width="160" height="120" fill="#18181b" rx="3"/>
+		<rect x="0" y="0" width="42" height="120" fill="#09090b" rx="3"/>
+		<rect x="5" y="8" width="32" height="4" fill="#52525b" rx="1"/>
+		<rect x="5" y="18" width="30" height="2.5" fill="#818cf8" rx="1"/>
+		<rect x="5" y="24" width="26" height="2.5" fill="#3f3f46" rx="1"/>
+		<rect x="5" y="30" width="28" height="2.5" fill="#3f3f46" rx="1"/>
+		<rect x="5" y="36" width="24" height="2.5" fill="#3f3f46" rx="1"/>
+		<rect x="5" y="42" width="30" height="2.5" fill="#3f3f46" rx="1"/>
+		<rect x="5" y="48" width="22" height="2.5" fill="#3f3f46" rx="1"/>
+		<rect x="50" y="10" width="100" height="5" fill="#52525b" rx="1"/>
+		<rect x="50" y="20" width="90" height="2.5" fill="#3f3f46" rx="1"/>
+		<rect x="50" y="26" width="95" height="2.5" fill="#3f3f46" rx="1"/>
+		<rect x="50" y="36" width="100" height="20" fill="#09090b" rx="2"/>
+		<rect x="55" y="41" width="50" height="2" fill="#818cf8" rx="1"/>
+		<rect x="55" y="46" width="65" height="2" fill="#34d399" rx="1"/>
+		<rect x="55" y="51" width="40" height="2" fill="#fbbf24" rx="1"/>
+		<rect x="50" y="62" width="90" height="2.5" fill="#3f3f46" rx="1"/>
+		<rect x="50" y="68" width="95" height="2.5" fill="#3f3f46" rx="1"/>
+	</svg>
+}
+
+templ modernPreviewSVG() {
+	<svg viewBox="0 0 160 120" class="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+		<rect width="160" height="120" fill="#18181b" rx="3"/>
+		<rect x="0" y="0" width="160" height="10" fill="#09090b" rx="3"/>
+		<rect x="8" y="3" width="25" height="4" fill="#52525b" rx="1"/>
+		<rect x="50" y="3" width="15" height="4" fill="#818cf8" rx="1"/>
+		<rect x="70" y="3" width="15" height="4" fill="#3f3f46" rx="1"/>
+		<circle cx="148" cy="5" r="2.5" fill="#3f3f46"/>
+		<rect x="0" y="10" width="36" height="110" fill="#09090b"/>
+		<rect x="4" y="16" width="28" height="2.5" fill="#818cf8" rx="1"/>
+		<rect x="4" y="22" width="24" height="2.5" fill="#3f3f46" rx="1"/>
+		<rect x="4" y="28" width="26" height="2.5" fill="#3f3f46" rx="1"/>
+		<rect x="44" y="16" width="80" height="5" fill="#52525b" rx="1"/>
+		<rect x="44" y="26" width="75" height="2.5" fill="#3f3f46" rx="1"/>
+		<rect x="44" y="36" width="80" height="18" fill="#09090b" rx="2"/>
+		<rect x="49" y="41" width="40" height="2" fill="#818cf8" rx="1"/>
+		<rect x="49" y="46" width="55" height="2" fill="#34d399" rx="1"/>
+		<rect x="44" y="60" width="75" height="2.5" fill="#3f3f46" rx="1"/>
+		<rect x="130" y="16" width="24" height="2.5" fill="#52525b" rx="1"/>
+		<rect x="130" y="22" width="20" height="2" fill="#3f3f46" rx="1"/>
+		<rect x="130" y="27" width="22" height="2" fill="#3f3f46" rx="1"/>
+	</svg>
+}
+
+templ paletteCircle(index int, p models.ColorPaletteOption) {
+	if index == 0 {
+		@templ.Raw(fmt.Sprintf(`<label class="palette-radio" title="%s"><input type="radio" name="color_palette" value="%s" class="sr-only" checked/><div class="w-7 h-7 rounded-full border border-zinc-600" style="background-color:%s;color:%s"></div></label>`, p.Name, p.ID, p.Color, p.Color))
+	} else {
+		@templ.Raw(fmt.Sprintf(`<label class="palette-radio" title="%s"><input type="radio" name="color_palette" value="%s" class="sr-only"/><div class="w-7 h-7 rounded-full border border-zinc-600" style="background-color:%s;color:%s"></div></label>`, p.Name, p.ID, p.Color, p.Color))
+	}
+}
+
+templ typographyCard(index int, t models.TypographyOption) {
+	if index == 0 {
+		@templ.Raw(fmt.Sprintf(`<label class="template-card cursor-pointer"><input type="radio" name="typography" value="%s" class="sr-only" checked/><div class="border border-zinc-800 rounded-lg px-3 py-3 hover:border-zinc-600 transition-all text-center"><div class="text-xl font-bold mb-1 text-white" style="font-family:%s">Aa</div><div class="text-[10px] font-mono text-zinc-500">%s</div></div></label>`, t.ID, t.Hint, t.Name))
+	} else {
+		@templ.Raw(fmt.Sprintf(`<label class="template-card cursor-pointer"><input type="radio" name="typography" value="%s" class="sr-only"/><div class="border border-zinc-800 rounded-lg px-3 py-3 hover:border-zinc-600 transition-all text-center"><div class="text-xl font-bold mb-1 text-white" style="font-family:%s">Aa</div><div class="text-[10px] font-mono text-zinc-500">%s</div></div></label>`, t.ID, t.Hint, t.Name))
+	}
+}

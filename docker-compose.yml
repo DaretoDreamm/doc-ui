@@ -1,0 +1,13 @@
+services:
+  app:
+    build: .
+    ports:
+      - "4000:4000"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - DB_PATH=/app/data/docui.db
+      - PORT=4000
+      - MAX_CRAWL_DEPTH=3
+      - CRAWL_DELAY_MS=500
+    restart: unless-stopped

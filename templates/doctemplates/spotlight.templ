@@ -1,0 +1,42 @@
+package doctemplates
+
+import "fmt"
+
+templ Spotlight(projectID int64) {
+	<!-- Spotlight Modal -->
+	<div id="spotlight" class="spotlight-overlay" style="display:none;" onclick="if(event.target===this)closeSpotlight()">
+		<div class="spotlight-modal">
+			<div class="spotlight-header">
+				<svg class="spotlight-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+					<path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+				</svg>
+				<input
+					id="spotlight-input"
+					type="text"
+					placeholder="Search documentation..."
+					class="spotlight-input"
+					autocomplete="off"
+					hx-get={ fmt.Sprintf("/docs/%d/search", projectID) }
+					hx-trigger="keyup changed delay:150ms"
+					hx-target="#spotlight-results"
+					hx-swap="innerHTML"
+					name="q"
+				/>
+				<kbd class="spotlight-kbd">esc</kbd>
+			</div>
+			<div id="spotlight-results" class="spotlight-results"></div>
+		</div>
+	</div>
+}
+
+templ SpotlightTrigger() {
+	<button onclick="openSpotlight()" class="spotlight-trigger" title="Search (Cmd+K)">
+		<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+			<path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+		</svg>
+		<span class="spotlight-trigger-label">Search</span>
+		<kbd class="spotlight-trigger-kbd">
+			<span>&#8984;</span>K
+		</kbd>
+	</button>
+}
