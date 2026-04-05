@@ -1,9 +1,9 @@
-FROM golang:1.23-alpine AS builder
+FROM golang:1.24-alpine AS builder
 
 RUN apk add --no-cache git
 
 # Install templ
-RUN go install github.com/a-h/templ/cmd/templ@v0.3.819
+RUN go install github.com/a-h/templ/cmd/templ@v0.3.1001
 
 WORKDIR /app
 
@@ -29,7 +29,7 @@ WORKDIR /app
 COPY --from=builder /app/docui .
 COPY --from=builder /app/static ./static
 
-RUN mkdir -p /app/data
+RUN mkdir -p /app/data /app/data/kb
 
 EXPOSE 4000
 

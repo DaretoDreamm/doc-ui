@@ -73,6 +73,98 @@ func (db *DB) migrate() error {
 
 	db.conn.Exec("ALTER TABLE projects ADD COLUMN color_palette TEXT NOT NULL DEFAULT 'ocean'")
 	db.conn.Exec("ALTER TABLE projects ADD COLUMN typography TEXT NOT NULL DEFAULT 'modern'")
+
+	// Knowledge Base tables
+	_, err = db.conn.Exec(`
+		CREATE TABLE IF NOT EXISTS knowledge_bases (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			name TEXT NOT NULL,
+			slug TEXT NOT NULL UNIQUE,
+			description TEXT DEFAULT '',
+			base_path TEXT NOT NULL,
+			article_count INTEGER DEFAULT 0,
+			raw_count INTEGER DEFAULT 0,
+			status TEXT NOT NULL DEFAULT 'idle',
+			llm_provider TEXT DEFAULT '',
+			llm_model TEXT DEFAULT '',
+			color_palette TEXT NOT NULL DEFAULT 'ocean',
+			typography TEXT NOT NULL DEFAULT 'modern',
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		);
+
+		CREATE TABLE IF NOT EXISTS articles (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			kb_id INTEGER NOT NULL REFERENCES knowledge_bases(id) ON DELETE CASCADE,
+			file_path TEXT NOT NULL,
+			title TEXT NOT NULL DEFAULT '',
+			summary TEXT DEFAULT '',
+			content TEXT NOT NULL DEFAULT '',
+			content_hash TEXT DEFAULT '',
+			category TEXT DEFAULT '',
+			tags TEXT DEFAULT '[]',
+			backlink_count INTEGER DEFAULT 0,
+			word_count INTEGER DEFAULT 0,
+			source TEXT DEFAULT 'manual',
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			UNIQUE(kb_id, file_path)
+		);
+
+		CREATE INDEX IF NOT EXISTS idx_articles_kb ON articles(kb_id);
+
+		CREATE TABLE IF NOT EXISTS raw_documents (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			kb_id INTEGER NOT NULL REFERENCES knowledge_bases(id) ON DELETE CASCADE,
+			file_path TEXT NOT NULL,
+			file_name TEXT NOT NULL,
+			mime_type TEXT DEFAULT '',
+			size INTEGER DEFAULT 0,
+			processed INTEGER DEFAULT 0,
+			summary TEXT DEFAULT '',
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			UNIQUE(kb_id, file_path)
+		);
+
+		CREATE INDEX IF NOT EXISTS idx_raw_docs_kb ON raw_documents(kb_id);
+
+		CREATE TABLE IF NOT EXISTS backlinks (
+			source_article_id INTEGER NOT NULL REFERENCES articles(id) ON DELETE CASCADE,
+			target_article_id INTEGER NOT NULL REFERENCES articles(id) ON DELETE CASCADE,
+			context TEXT DEFAULT '',
+			PRIMARY KEY (source_article_id, target_article_id)
+		);
+
+		CREATE TABLE IF NOT EXISTS chat_messages (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			kb_id INTEGER NOT NULL REFERENCES knowledge_bases(id) ON DELETE CASCADE,
+			role TEXT NOT NULL,
+			content TEXT NOT NULL DEFAULT '',
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		);
+
+		CREATE INDEX IF NOT EXISTS idx_chat_kb ON chat_messages(kb_id);
+
+		CREATE TABLE IF NOT EXISTS health_checks (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			kb_id INTEGER NOT NULL REFERENCES knowledge_bases(id) ON DELETE CASCADE,
+			type TEXT NOT NULL,
+			severity TEXT NOT NULL DEFAULT 'warning',
+			message TEXT NOT NULL DEFAULT '',
+			article_id INTEGER DEFAULT 0,
+			resolved INTEGER DEFAULT 0,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		);
+
+		CREATE INDEX IF NOT EXISTS idx_health_kb ON health_checks(kb_id);
+	`)
+	if err != nil {
+		return err
+	}
+
+	// FTS5 for article search (ignore error if already exists)
+	db.conn.Exec(`CREATE VIRTUAL TABLE IF NOT EXISTS articles_fts USING fts5(title, summary, content, tags, content=articles, content_rowid=id)`)
+
 	return nil
 }
 

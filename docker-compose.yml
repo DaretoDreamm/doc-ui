@@ -10,4 +10,9 @@ services:
       - PORT=4000
       - MAX_CRAWL_DEPTH=3
       - CRAWL_DELAY_MS=500
+      # LLM config (optional — KB compilation & Q&A require these)
+      - LLM_PROVIDER=${LLM_PROVIDER:-}
+      - LLM_API_KEY=${LLM_API_KEY:-}
+      - LLM_MODEL=${LLM_MODEL:-}
+      - LLM_BASE_URL=${LLM_BASE_URL:-}
     restart: unless-stopped

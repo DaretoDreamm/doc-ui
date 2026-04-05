@@ -1,0 +1,124 @@
+package kbpages
+
+import (
+	"fmt"
+	"github.com/frkn/doc-ui/internal/models"
+	"github.com/frkn/doc-ui/templates/layouts"
+)
+
+templ KBList(kbs []models.KnowledgeBase, llmConfigured bool) {
+	@layouts.Base("Knowledge Bases") {
+		@KBForm(llmConfigured)
+		<div class="fade-up fade-up-2">
+			<div class="flex items-center gap-3 mb-5">
+				<h2 class="font-display font-bold text-white text-lg tracking-tight">Knowledge Bases</h2>
+				if len(kbs) > 0 {
+					<span class="text-[10px] font-mono text-zinc-500 bg-zinc-800 px-2 py-0.5 rounded">{ fmt.Sprintf("%d", len(kbs)) }</span>
+				}
+			</div>
+			<div id="kb-list" class="space-y-2">
+				if len(kbs) == 0 {
+					<div class="text-center py-16 border border-dashed border-zinc-800 rounded-lg">
+						<p class="text-sm text-zinc-600 font-mono">No knowledge bases yet</p>
+						<p class="text-xs text-zinc-700 mt-1">Create one above to start building your wiki</p>
+					</div>
+				}
+				for _, kb := range kbs {
+					@KBCard(kb)
+				}
+			</div>
+		</div>
+	}
+}
+
+templ KBForm(llmConfigured bool) {
+	<div class="window-card fade-up mb-10">
+		<div class="window-bar">
+			<div class="window-dot" style="background: #ff5f57;"></div>
+			<div class="window-dot" style="background: #febc2e;"></div>
+			<div class="window-dot" style="background: #28c840;"></div>
+			<span class="ml-2 text-xs font-mono text-zinc-500">new-knowledge-base</span>
+		</div>
+		<div class="window-body">
+			<h2 class="font-display font-bold text-2xl text-white mb-1 tracking-tight">Create Knowledge Base</h2>
+			<p class="text-sm text-zinc-500 mb-8">Build an LLM-powered wiki from your research documents.</p>
+			if !llmConfigured {
+				<div class="text-xs text-amber-400 bg-amber-950/30 border border-amber-900/50 rounded px-3 py-2 font-mono mb-6">
+					LLM not configured — set LLM_PROVIDER and LLM_API_KEY to enable compilation &amp; Q&amp;A
+				</div>
+			}
+			<form
+				hx-post="/kb"
+				hx-target="#kb-list"
+				hx-swap="afterbegin"
+				hx-on::after-request="if(event.detail.successful) this.reset()"
+				class="space-y-7"
+			>
+				<div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+					<div>
+						<label for="kb-name" class="block text-[10px] font-mono text-zinc-400 mb-2 uppercase tracking-[0.15em]">Name</label>
+						<input
+							type="text"
+							id="kb-name"
+							name="name"
+							required
+							placeholder="ML Research"
+							class="w-full px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-lg text-white placeholder-zinc-600 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 transition-all"
+						/>
+					</div>
+					<div>
+						<label for="kb-desc" class="block text-[10px] font-mono text-zinc-400 mb-2 uppercase tracking-[0.15em]">Description</label>
+						<input
+							type="text"
+							id="kb-desc"
+							name="description"
+							placeholder="Papers and notes on transformer architectures"
+							class="w-full px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-lg text-white placeholder-zinc-600 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 transition-all"
+						/>
+					</div>
+				</div>
+				<div>
+					<label class="block text-[10px] font-mono text-zinc-400 mb-3 uppercase tracking-[0.15em]">Theme Color</label>
+					<div class="flex items-center gap-3 flex-wrap">
+						for i, p := range models.ColorPalettes {
+							@kbPaletteCircle(i, p)
+						}
+					</div>
+				</div>
+				<div>
+					<label class="block text-[10px] font-mono text-zinc-400 mb-3 uppercase tracking-[0.15em]">Typography</label>
+					<div class="grid grid-cols-5 gap-2">
+						for i, t := range models.Typographies {
+							@kbTypographyCard(i, t)
+						}
+					</div>
+				</div>
+				<div class="flex items-center gap-4 pt-2">
+					<button
+						type="submit"
+						class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold rounded-lg transition-colors active:scale-[0.98]"
+					>
+						Create Wiki &rarr;
+					</button>
+					<span class="text-[11px] text-zinc-600 font-mono">Obsidian-compatible markdown</span>
+				</div>
+			</form>
+		</div>
+	</div>
+}
+
+templ kbPaletteCircle(index int, p models.ColorPaletteOption) {
+	if index == 0 {
+		@templ.Raw(fmt.Sprintf(`<label class="palette-radio" title="%s"><input type="radio" name="color_palette" value="%s" class="sr-only" checked/><div class="w-7 h-7 rounded-full border border-zinc-600" style="background-color:%s;color:%s"></div></label>`, p.Name, p.ID, p.Color, p.Color))
+	} else {
+		@templ.Raw(fmt.Sprintf(`<label class="palette-radio" title="%s"><input type="radio" name="color_palette" value="%s" class="sr-only"/><div class="w-7 h-7 rounded-full border border-zinc-600" style="background-color:%s;color:%s"></div></label>`, p.Name, p.ID, p.Color, p.Color))
+	}
+}
+
+templ kbTypographyCard(index int, t models.TypographyOption) {
+	if index == 0 {
+		@templ.Raw(fmt.Sprintf(`<label class="template-card cursor-pointer"><input type="radio" name="typography" value="%s" class="sr-only" checked/><div class="border border-zinc-800 rounded-lg px-3 py-3 hover:border-zinc-600 transition-all text-center"><div class="text-xl font-bold mb-1 text-white" style="font-family:%s">Aa</div><div class="text-[10px] font-mono text-zinc-500">%s</div></div></label>`, t.ID, t.Hint, t.Name))
+	} else {
+		@templ.Raw(fmt.Sprintf(`<label class="template-card cursor-pointer"><input type="radio" name="typography" value="%s" class="sr-only"/><div class="border border-zinc-800 rounded-lg px-3 py-3 hover:border-zinc-600 transition-all text-center"><div class="text-xl font-bold mb-1 text-white" style="font-family:%s">Aa</div><div class="text-[10px] font-mono text-zinc-500">%s</div></div></label>`, t.ID, t.Hint, t.Name))
+	}
+}

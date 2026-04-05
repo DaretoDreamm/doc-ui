@@ -1,0 +1,35 @@
+package kbpages
+
+import (
+	"fmt"
+	"github.com/frkn/doc-ui/internal/models"
+)
+
+templ KBSearchResults(kbID int64, results []models.Article) {
+	if len(results) == 0 {
+		<div class="px-4 py-6 text-center text-sm" style="color: var(--c-text-muted);">
+			No results found
+		</div>
+	}
+	for _, a := range results {
+		<a
+			href={ templ.SafeURL(fmt.Sprintf("/kb/%d/articles/%s", kbID, trimMD(a.FilePath))) }
+			class="spotlight-result block px-4 py-3 no-underline"
+		>
+			<div class="text-sm font-medium" style="color: var(--c-text);">{ a.Title }</div>
+			if a.Summary != "" {
+				<div class="text-xs mt-0.5 line-clamp-1" style="color: var(--c-text-muted);">{ truncateSummary(a.Summary, 100) }</div>
+			}
+			if a.Category != "" {
+				<span class="inline-block mt-1 text-[10px] font-mono px-1.5 py-0.5 rounded" style="background: var(--c-active-bg); color: var(--c-text-muted);">{ a.Category }</span>
+			}
+		</a>
+	}
+}
+
+func truncateSummary(s string, max int) string {
+	if len(s) <= max {
+		return s
+	}
+	return s[:max] + "..."
+}

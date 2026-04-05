@@ -1,0 +1,122 @@
+package kbpages
+
+import (
+	"fmt"
+	"github.com/frkn/doc-ui/internal/models"
+	"github.com/frkn/doc-ui/templates/layouts"
+)
+
+templ KBGraph(kb *models.KnowledgeBase) {
+	@layouts.Base(kb.Name + " - Graph") {
+		<div class="fade-up">
+			<div class="flex items-center gap-2 mb-1">
+				<a href={ templ.SafeURL(fmt.Sprintf("/kb/%d", kb.ID)) } class="text-[10px] font-mono text-zinc-500 hover:text-zinc-300 transition-colors">&larr; { kb.Name }</a>
+			</div>
+			<h1 class="font-display font-bold text-2xl text-white tracking-tight mb-6">Concept Graph</h1>
+		</div>
+		<div class="window-card fade-up fade-up-1">
+			<div class="window-bar">
+				<div class="window-dot" style="background: #ff5f57;"></div>
+				<div class="window-dot" style="background: #febc2e;"></div>
+				<div class="window-dot" style="background: #28c840;"></div>
+				<span class="ml-2 text-xs font-mono text-zinc-500">concept-graph</span>
+			</div>
+			<div class="window-body p-0" style="height: 600px;">
+				<div id="graph" style="width: 100%; height: 100%;"></div>
+			</div>
+		</div>
+		<script src="https://d3js.org/d3.v7.min.js"></script>
+		@templ.Raw(fmt.Sprintf("<script>%s</script>", graphJS(kb.ID)))
+	}
+}
+
+func graphJS(kbID int64) string {
+	return fmt.Sprintf(`
+		fetch('/kb/%d/graph.json')
+			.then(r => r.json())
+			.then(data => {
+				if (!data.nodes || data.nodes.length === 0) {
+					document.getElementById('graph').innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%%;color:#71717a;font-family:monospace;font-size:14px;">No articles yet — compile your wiki first</div>';
+					return;
+				}
+
+				const container = document.getElementById('graph');
+				const width = container.clientWidth;
+				const height = container.clientHeight;
+
+				const svg = d3.select('#graph').append('svg')
+					.attr('width', width)
+					.attr('height', height)
+					.attr('viewBox', [0, 0, width, height]);
+
+				// Category colors
+				const color = d3.scaleOrdinal(d3.schemeTableau10);
+
+				const simulation = d3.forceSimulation(data.nodes)
+					.force('link', d3.forceLink(data.edges).id(d => d.id).distance(80))
+					.force('charge', d3.forceManyBody().strength(-200))
+					.force('center', d3.forceCenter(width / 2, height / 2))
+					.force('collision', d3.forceCollide().radius(30));
+
+				const link = svg.append('g')
+					.selectAll('line')
+					.data(data.edges)
+					.join('line')
+					.attr('stroke', '#3f3f46')
+					.attr('stroke-width', 1);
+
+				const node = svg.append('g')
+					.selectAll('g')
+					.data(data.nodes)
+					.join('g')
+					.call(d3.drag()
+						.on('start', dragstarted)
+						.on('drag', dragged)
+						.on('end', dragended))
+					.style('cursor', 'pointer')
+					.on('click', (event, d) => {
+						window.location.href = '/kb/%d/articles/' + d.path;
+					});
+
+				node.append('circle')
+					.attr('r', d => Math.max(6, Math.min(20, Math.sqrt(d.size || 100) / 2)))
+					.attr('fill', d => color(d.category || 'default'))
+					.attr('stroke', '#18181b')
+					.attr('stroke-width', 2);
+
+				node.append('text')
+					.text(d => d.title)
+					.attr('x', 0)
+					.attr('y', d => Math.max(6, Math.min(20, Math.sqrt(d.size || 100) / 2)) + 14)
+					.attr('text-anchor', 'middle')
+					.attr('fill', '#a1a1aa')
+					.attr('font-size', '10px')
+					.attr('font-family', "'Fira Code', monospace");
+
+				simulation.on('tick', () => {
+					link
+						.attr('x1', d => d.source.x)
+						.attr('y1', d => d.source.y)
+						.attr('x2', d => d.target.x)
+						.attr('y2', d => d.target.y);
+					node
+						.attr('transform', d => 'translate(' + d.x + ',' + d.y + ')');
+				});
+
+				function dragstarted(event) {
+					if (!event.active) simulation.alphaTarget(0.3).restart();
+					event.subject.fx = event.subject.x;
+					event.subject.fy = event.subject.y;
+				}
+				function dragged(event) {
+					event.subject.fx = event.x;
+					event.subject.fy = event.y;
+				}
+				function dragended(event) {
+					if (!event.active) simulation.alphaTarget(0);
+					event.subject.fx = null;
+					event.subject.fy = null;
+				}
+			});
+	`, kbID, kbID)
+}

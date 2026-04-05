@@ -1,0 +1,169 @@
+package kbpages
+
+import (
+	"fmt"
+	"github.com/frkn/doc-ui/internal/models"
+	"github.com/frkn/doc-ui/templates/doctemplates"
+)
+
+templ WikiArticle(kb *models.KnowledgeBase, articles []models.Article, current *models.Article, contentHTML string, backlinks []models.Backlink, paletteCSS string, typoCSS string, fontsLink string) {
+	<!DOCTYPE html>
+	<html lang="en">
+		<head>
+			<meta charset="UTF-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+			<title>{ current.Title } - { kb.Name }</title>
+			<script src="https://cdn.tailwindcss.com"></script>
+			<script src="https://unpkg.com/lucide@latest"></script>
+			<link rel="preconnect" href="https://fonts.googleapis.com"/>
+			<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+			@templ.Raw(fontsLink)
+			@templ.Raw("<style>" + paletteCSS + typoCSS + doctemplates.ProseCSS() + `
+				.sidebar-link { transition: all 0.15s; }
+				.sidebar-link.active { background: var(--c-active-bg); color: var(--c-active-text); font-weight: 500; border-left: 3px solid var(--c-primary); padding-left: 9px; }
+				.sidebar-link:not(.active):hover { background: var(--c-active-bg); color: var(--c-text); }
+				.wiki-link { color: var(--c-link); text-decoration: underline; text-underline-offset: 2px; text-decoration-color: var(--c-border); }
+				.wiki-link:hover { text-decoration-color: var(--c-link); }
+				.wiki-link-dead { color: var(--c-text-muted); text-decoration: underline wavy; text-decoration-color: #ef4444; }
+				.backlink-card { border: 1px solid var(--c-border); border-radius: 8px; padding: 8px 12px; transition: all 0.15s; }
+				.backlink-card:hover { border-color: var(--c-primary); background: var(--c-active-bg); }
+			` + "</style>")
+		</head>
+		<body>
+			<div class="flex h-screen overflow-hidden">
+				<!-- Sidebar -->
+				<aside class="w-72 border-r flex flex-col h-full flex-shrink-0" style="background: var(--c-sidebar); border-color: var(--c-border);">
+					<div class="p-4 border-b" style="border-color: var(--c-border);">
+						<a href={ templ.SafeURL(fmt.Sprintf("/kb/%d", kb.ID)) } class="text-[10px] font-mono uppercase tracking-wider block mb-1.5 transition-opacity hover:opacity-100" style="color: var(--c-text-muted); opacity: 0.6;">&larr; { kb.Name }</a>
+						<h1 class="font-display font-bold text-lg tracking-tight" style="color: var(--c-primary);">Wiki</h1>
+						<p class="text-[10px] font-mono mt-0.5" style="color: var(--c-text-muted);">{ fmt.Sprintf("%d articles", len(articles)) }</p>
+					</div>
+					<div class="p-3">
+						@wikiSpotlightTrigger()
+						<input
+							type="text"
+							placeholder="Filter articles..."
+							class="w-full px-3 py-2 text-sm rounded-md mt-2"
+							style="background: var(--c-surface); border: 1px solid var(--c-border); color: var(--c-text);"
+							oninput="filterArticles(this.value)"
+						/>
+					</div>
+					<nav class="flex-1 overflow-y-auto px-3 pb-4" id="sidebar-nav">
+						for _, a := range articles {
+							if a.ID == current.ID {
+								<a
+									href={ templ.SafeURL(fmt.Sprintf("/kb/%d/articles/%s", kb.ID, trimMD(a.FilePath))) }
+									class="sidebar-link active block px-3 py-1.5 text-sm rounded-md mb-px"
+									data-title={ a.Title }
+								>
+									{ a.Title }
+								</a>
+							} else {
+								<a
+									href={ templ.SafeURL(fmt.Sprintf("/kb/%d/articles/%s", kb.ID, trimMD(a.FilePath))) }
+									class="sidebar-link block px-3 py-1.5 text-sm rounded-md mb-px"
+									style="color: var(--c-text-muted);"
+									data-title={ a.Title }
+								>
+									{ a.Title }
+								</a>
+							}
+						}
+					</nav>
+				</aside>
+				<!-- Main Content -->
+				<div class="flex-1 overflow-y-auto" style="background: var(--c-bg);">
+					<div class="max-w-4xl mx-auto px-8 py-10">
+						<!-- Article metadata -->
+						<div class="flex items-center gap-2 mb-4 text-[10px] font-mono" style="color: var(--c-text-muted);">
+							if current.Category != "" {
+								<span class="px-2 py-0.5 rounded" style="background: var(--c-active-bg);">{ current.Category }</span>
+							}
+							if current.Source != "" && current.Source != "manual" {
+								<span>{ current.Source }</span>
+							}
+							<span>{ fmt.Sprintf("%d words", current.WordCount) }</span>
+						</div>
+						<!-- Article body -->
+						<article class="prose">
+							@templ.Raw(contentHTML)
+						</article>
+						<!-- Backlinks -->
+						if len(backlinks) > 0 {
+							<div class="mt-10 pt-6" style="border-top: 1px solid var(--c-border);">
+								<h3 class="font-display font-semibold text-sm mb-3" style="color: var(--c-text-muted);">
+									Linked from ({ fmt.Sprintf("%d", len(backlinks)) })
+								</h3>
+								<div class="space-y-2">
+									for _, bl := range backlinks {
+										<a
+											href={ templ.SafeURL(fmt.Sprintf("/kb/%d/articles/%s", kb.ID, findArticlePath(articles, bl.SourceArticleID))) }
+											class="backlink-card block no-underline"
+										>
+											<span class="text-sm font-medium" style="color: var(--c-text);">{ bl.SourceTitle }</span>
+										</a>
+									}
+								</div>
+							</div>
+						}
+					</div>
+				</div>
+			</div>
+			@wikiSpotlight(kb.ID)
+			<script src="https://unpkg.com/htmx.org@2.0.4"></script>
+			@templ.Raw("<script>" + doctemplates.SpotlightJS() + `
+				function filterArticles(query) {
+					const links = document.querySelectorAll('#sidebar-nav a');
+					const q = query.toLowerCase();
+					links.forEach(link => {
+						const title = link.getAttribute('data-title').toLowerCase();
+						link.style.display = title.includes(q) ? '' : 'none';
+					});
+				}
+				lucide.createIcons();
+				document.addEventListener('htmx:afterSwap', () => lucide.createIcons());
+			` + "</script>")
+		</body>
+	</html>
+}
+
+templ wikiSpotlightTrigger() {
+	<button onclick="openSpotlight()" class="flex items-center gap-2 w-full px-3 py-2 rounded-md text-sm cursor-pointer transition-all" style="background: var(--c-bg); border: 1px solid var(--c-border); color: var(--c-text-muted);" title="Search (Cmd+K)">
+		<i data-lucide="search" class="w-4 h-4"></i>
+		<span>Search</span>
+		<kbd class="ml-auto text-[10px] px-1.5 py-0.5 rounded" style="border: 1px solid var(--c-border); font-family: 'Fira Code', monospace;">⌘K</kbd>
+	</button>
+}
+
+templ wikiSpotlight(kbID int64) {
+	<div id="spotlight" class="spotlight-overlay" style="display:none;" onclick="if(event.target===this)closeSpotlight()">
+		<div class="spotlight-modal">
+			<div class="spotlight-header">
+				<i data-lucide="search" class="spotlight-icon"></i>
+				<input
+					id="spotlight-input"
+					type="text"
+					placeholder="Search wiki..."
+					class="spotlight-input"
+					autocomplete="off"
+					hx-get={ fmt.Sprintf("/kb/%d/search", kbID) }
+					hx-trigger="keyup changed delay:150ms"
+					hx-target="#spotlight-results"
+					hx-swap="innerHTML"
+					name="q"
+				/>
+				<kbd class="spotlight-kbd">esc</kbd>
+			</div>
+			<div id="spotlight-results" class="spotlight-results"></div>
+		</div>
+	</div>
+}
+
+func findArticlePath(articles []models.Article, id int64) string {
+	for _, a := range articles {
+		if a.ID == id {
+			return trimMD(a.FilePath)
+		}
+	}
+	return ""
+}

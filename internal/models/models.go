@@ -36,6 +36,91 @@ type CrawlProgress struct {
 	ErrorMsg   string
 }
 
+// Knowledge Base models
+
+type KnowledgeBase struct {
+	ID           int64
+	Name         string
+	Slug         string
+	Description  string
+	BasePath     string
+	ArticleCount int
+	RawCount     int
+	Status       string // active, compiling, idle
+	LLMProvider  string
+	LLMModel     string
+	ColorPalette string
+	Typography   string
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+}
+
+type Article struct {
+	ID            int64
+	KBID          int64
+	FilePath      string // relative path within wiki/, e.g. "concepts/neural-networks.md"
+	Title         string
+	Summary       string
+	Content       string // markdown content
+	ContentHTML   string // rendered HTML (not stored, computed)
+	ContentHash   string
+	Category      string
+	Tags          string // JSON array
+	BacklinkCount int
+	WordCount     int
+	Source        string // manual, llm-generated, llm-compiled, imported
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+}
+
+type RawDocument struct {
+	ID        int64
+	KBID      int64
+	FilePath  string
+	FileName  string
+	MimeType  string
+	Size      int64
+	Processed bool
+	Summary   string
+	CreatedAt time.Time
+}
+
+type Backlink struct {
+	SourceArticleID int64
+	TargetArticleID int64
+	SourceTitle     string
+	TargetTitle     string
+	Context         string
+}
+
+type ChatMessage struct {
+	ID        int64
+	KBID      int64
+	Role      string // user, assistant
+	Content   string
+	CreatedAt time.Time
+}
+
+type HealthCheck struct {
+	ID        int64
+	KBID      int64
+	Type      string // orphan, dead-link, stale, inconsistency, missing-coverage, duplicate
+	Severity  string // error, warning, suggestion
+	Message   string
+	ArticleID int64
+	Resolved  bool
+	CreatedAt time.Time
+}
+
+type PipelineProgress struct {
+	KBID        int64
+	Stage       string // scanning, summarizing, extracting, generating, linking, indexing
+	Processed   int
+	Total       int
+	CurrentFile string
+	ErrorMsg    string
+}
+
 type TemplateOption struct {
 	ID          string
 	Name        string

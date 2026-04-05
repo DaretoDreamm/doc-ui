@@ -1,0 +1,206 @@
+package kbpages
+
+import (
+	"fmt"
+	"github.com/frkn/doc-ui/internal/models"
+	"github.com/frkn/doc-ui/templates/doctemplates"
+)
+
+templ KBChat(kb *models.KnowledgeBase, messages []models.ChatMessage, articles []models.Article, llmConfigured bool, paletteCSS string, typoCSS string, fontsLink string) {
+	<!DOCTYPE html>
+	<html lang="en">
+		<head>
+			<meta charset="UTF-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+			<title>Chat - { kb.Name }</title>
+			<script src="https://cdn.tailwindcss.com"></script>
+			<script src="https://unpkg.com/htmx.org@2.0.4"></script>
+			<script src="https://unpkg.com/lucide@latest"></script>
+			<link rel="preconnect" href="https://fonts.googleapis.com"/>
+			<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+			@templ.Raw(fontsLink)
+			@templ.Raw("<style>" + paletteCSS + typoCSS + doctemplates.ProseCSS() + `
+				.chat-bubble { border-radius: 12px; padding: 12px 16px; max-width: 85%; }
+				.chat-user { background: var(--c-active-bg); color: var(--c-text); margin-left: auto; }
+				.chat-assistant { background: var(--c-surface); border: 1px solid var(--c-border); color: var(--c-text); }
+				.chat-assistant .prose { font-size: 0.875rem; }
+				.chat-assistant .prose p { margin-bottom: 0.75em; }
+				.chat-assistant .prose pre { font-size: 0.75rem; }
+				#streaming-response { white-space: pre-wrap; }
+			` + "</style>")
+		</head>
+		<body style="background: var(--c-bg); color: var(--c-text);">
+			<div class="flex h-screen overflow-hidden">
+				<!-- Sidebar - article list -->
+				<aside class="w-64 border-r flex flex-col h-full flex-shrink-0" style="background: var(--c-sidebar); border-color: var(--c-border);">
+					<div class="p-4 border-b" style="border-color: var(--c-border);">
+						<a href={ templ.SafeURL(fmt.Sprintf("/kb/%d", kb.ID)) } class="text-[10px] font-mono uppercase tracking-wider block mb-1.5 transition-opacity hover:opacity-100" style="color: var(--c-text-muted); opacity: 0.6;">&larr; { kb.Name }</a>
+						<h1 class="font-display font-bold text-lg tracking-tight" style="color: var(--c-primary);">Q&amp;A</h1>
+						<p class="text-[10px] font-mono mt-0.5" style="color: var(--c-text-muted);">Ask questions about your wiki</p>
+					</div>
+					<div class="p-3 border-b" style="border-color: var(--c-border);">
+						<div class="text-[10px] font-mono uppercase tracking-wider mb-2" style="color: var(--c-text-muted);">Wiki Articles</div>
+					</div>
+					<nav class="flex-1 overflow-y-auto px-3 pb-4">
+						for _, a := range articles {
+							<a
+								href={ templ.SafeURL(fmt.Sprintf("/kb/%d/articles/%s", kb.ID, trimMD(a.FilePath))) }
+								class="block px-3 py-1.5 text-xs rounded-md mb-px transition-colors"
+								style="color: var(--c-text-muted);"
+								target="_blank"
+							>
+								{ a.Title }
+							</a>
+						}
+					</nav>
+				</aside>
+				<!-- Chat Area -->
+				<div class="flex-1 flex flex-col overflow-hidden">
+					<!-- Messages -->
+					<div id="chat-messages" class="flex-1 overflow-y-auto p-6 space-y-4">
+						if len(messages) == 0 && llmConfigured {
+							<div class="text-center py-20">
+								<i data-lucide="message-circle" class="w-10 h-10 mx-auto mb-4" style="color: var(--c-text-muted);"></i>
+								<h2 class="font-display font-bold text-xl mb-2" style="color: var(--c-text);">Ask anything about your wiki</h2>
+								<p class="text-sm" style="color: var(--c-text-muted);">The LLM will research answers across your { fmt.Sprintf("%d", len(articles)) } articles</p>
+							</div>
+						}
+						if !llmConfigured {
+							<div class="text-center py-20">
+								<i data-lucide="triangle-alert" class="w-10 h-10 mx-auto mb-4 text-amber-400"></i>
+								<h2 class="font-display font-bold text-xl mb-2" style="color: var(--c-text);">LLM Not Configured</h2>
+								<p class="text-sm" style="color: var(--c-text-muted);">Set LLM_PROVIDER and LLM_API_KEY environment variables to enable chat</p>
+							</div>
+						}
+						for _, m := range messages {
+							<div class="flex">
+								if m.Role == "user" {
+									<div class="chat-bubble chat-user">
+										<div class="text-sm">{ m.Content }</div>
+									</div>
+								} else {
+									<div class="chat-bubble chat-assistant">
+										<div class="prose text-sm">
+											@templ.Raw(m.Content)
+										</div>
+									</div>
+								}
+							</div>
+						}
+						<div id="streaming-area"></div>
+					</div>
+					<!-- Input -->
+					if llmConfigured {
+						<div class="border-t p-4" style="border-color: var(--c-border); background: var(--c-sidebar);">
+							<form id="chat-form" class="flex gap-3" onsubmit="sendMessage(event)">
+								<input type="hidden" name="kb_id" value={ fmt.Sprintf("%d", kb.ID) }/>
+								<input
+									type="text"
+									name="question"
+									id="chat-input"
+									placeholder="Ask a question about your knowledge base..."
+									autocomplete="off"
+									class="flex-1 px-4 py-3 rounded-lg text-sm"
+									style="background: var(--c-bg); border: 1px solid var(--c-border); color: var(--c-text);"
+								/>
+								<button type="submit" id="send-btn" class="px-6 py-3 rounded-lg text-sm font-semibold transition-colors" style="background: var(--c-primary); color: white;">
+									Send
+								</button>
+							</form>
+						</div>
+					}
+				</div>
+			</div>
+			@templ.Raw(fmt.Sprintf("<script>%s</script>", chatJS(kb.ID)))
+			<script>lucide.createIcons();</script>
+		</body>
+	</html>
+}
+
+func chatJS(kbID int64) string {
+	return fmt.Sprintf(`
+		function sendMessage(e) {
+			e.preventDefault();
+			const input = document.getElementById('chat-input');
+			const question = input.value.trim();
+			if (!question) return;
+
+			const messages = document.getElementById('chat-messages');
+			const streamArea = document.getElementById('streaming-area');
+
+			// Add user bubble
+			const userDiv = document.createElement('div');
+			userDiv.className = 'flex';
+			userDiv.innerHTML = '<div class="chat-bubble chat-user"><div class="text-sm">' + escapeHtml(question) + '</div></div>';
+			messages.insertBefore(userDiv, streamArea);
+
+			// Add assistant bubble
+			const assistantDiv = document.createElement('div');
+			assistantDiv.className = 'flex';
+			assistantDiv.innerHTML = '<div class="chat-bubble chat-assistant"><div class="prose text-sm" id="streaming-response"><span class="animate-pulse">Thinking...</span></div></div>';
+			messages.insertBefore(assistantDiv, streamArea);
+
+			input.value = '';
+			document.getElementById('send-btn').disabled = true;
+			messages.scrollTop = messages.scrollHeight;
+
+			// Stream response via SSE
+			const formData = new FormData();
+			formData.append('question', question);
+
+			fetch('/kb/%d/chat/ask', {
+				method: 'POST',
+				body: formData
+			}).then(response => {
+				const reader = response.body.getReader();
+				const decoder = new TextDecoder();
+				const responseEl = document.getElementById('streaming-response');
+				responseEl.innerHTML = '';
+				let fullText = '';
+
+				function read() {
+					reader.read().then(({done, value}) => {
+						if (done) {
+							document.getElementById('send-btn').disabled = false;
+							return;
+						}
+						const text = decoder.decode(value);
+						const lines = text.split('\n');
+						for (const line of lines) {
+							if (line.startsWith('data: ')) {
+								const data = line.slice(6);
+								if (data === '[DONE]') {
+									document.getElementById('send-btn').disabled = false;
+									return;
+								}
+								if (data.startsWith('[ERROR]')) {
+									responseEl.innerHTML = '<span style="color:#ef4444">' + escapeHtml(data) + '</span>';
+									document.getElementById('send-btn').disabled = false;
+									return;
+								}
+								fullText += data.replace(/\\n/g, '\n');
+								responseEl.textContent = fullText;
+							}
+						}
+						messages.scrollTop = messages.scrollHeight;
+						read();
+					});
+				}
+				read();
+			}).catch(err => {
+				document.getElementById('streaming-response').innerHTML = '<span style="color:#ef4444">Error: ' + escapeHtml(err.message) + '</span>';
+				document.getElementById('send-btn').disabled = false;
+			});
+		}
+
+		function escapeHtml(text) {
+			const div = document.createElement('div');
+			div.textContent = text;
+			return div.innerHTML;
+		}
+
+		// Auto-scroll on load
+		const msgs = document.getElementById('chat-messages');
+		if (msgs) msgs.scrollTop = msgs.scrollHeight;
+	`, kbID)
+}
